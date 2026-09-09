@@ -24,17 +24,33 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/react-app:latest .
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/react-app:latest .
 
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/react-app:latest
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/react-app:latest
+
+      - name: Test EC2 Port 22
+        run: |
+          echo "Testing connection to EC2 on port 22..."
+
+          timeout 15 bash -c \
+            "</dev/tcp/${{ secrets.EC2_HOST }}/22"
+
+          echo "✅ EC2 port 22 is reachable from GitHub Actions"
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
+          username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 10m
+
           script: |
             echo "Starting deployment..."
 
